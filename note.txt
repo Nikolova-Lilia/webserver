@@ -1,0 +1,56 @@
+1. Your program must take a configuration file as an argument, or use a default path.
+
+Handling configuration files in C++ often involves parsing key-value pairs, and one common approach is to 
+use standard library containers like std::map or std::unordered_map to store and manage these pairs.
+ For instance, a simple configuration file might look like this:
+
+url = http://example.com
+file = main.exe
+true_false = 0
+
+To read this configuration file, you can use std::ifstream to load the file and parse its contents
+ line by line. Here's an example of how you might implement this in C++:
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <map>
+#include <string>
+
+class ConfigReader {
+public:
+    std::map<std::string, std::string> configMap;
+
+    void readConfig(const std::string& filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Failed to open configuration file." << std::endl;
+            return;
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream lineStream(line);
+            std::string key, equals, value;
+
+            if (lineStream >> key >> equals >> value) {
+                if (equals == "=") {
+                    configMap[key] = value;
+                }
+            }
+        }
+        file.close();
+    }
+};
+
+int main() {
+    ConfigReader reader;
+    reader.readConfig("config.cfg");
+
+    // Example of accessing a configuration value
+    std::cout << "URL: " << reader.configMap["url"] << std::endl;
+    std::cout << "File: " << reader.configMap["file"] << std::endl;
+    std::cout << "True/False: " << reader.configMap["true_false"] << std::endl;
+
+    return 0;
+}
