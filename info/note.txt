@@ -1,0 +1,201 @@
+1. Your program must take a configuration file as an argument, or use a default path.
+
+Handling configuration files in C++ often involves parsing key-value pairs, and one common approach is to 
+use standard library containers like std::map or std::unordered_map to store and manage these pairs.
+ For instance, a simple configuration file might look like this:
+
+url = http://example.com
+file = main.exe
+true_false = 0
+
+To read this configuration file, you can use std::ifstream to load the file and parse its contents
+ line by line. Here's an example of how you might implement this in C++:
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <map>
+#include <string>
+
+class ConfigReader {
+public:
+    std::map<std::string, std::string> configMap;
+
+    void readConfig(const std::string& filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Failed to open configuration file." << std::endl;
+            return;
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream lineStream(line);
+            std::string key, equals, value;
+
+            if (lineStream >> key >> equals >> value) {
+                if (equals == "=") {
+                    configMap[key] = value;
+                }
+            }
+        }
+        file.close();
+    }
+};
+
+int main() {
+    ConfigReader reader;
+    reader.readConfig("config.cfg");
+
+    // Example of accessing a configuration value
+    std::cout << "URL: " << reader.configMap["url"] << std::endl;
+    std::cout << "File: " << reader.configMap["file"] << std::endl;
+    std::cout << "True/False: " << reader.configMap["true_false"] << std::endl;
+
+    return 0;
+}
+
+4. Example Code Snippet
+Here is a simplified example of a non-blocking server using poll() in C:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <poll.h>
+
+#define MAX_CLIENTS 100
+#define PORT 8080
+#define TIMEOUT 5000
+
+int set_nonblocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl");
+        return -1;
+    }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl");
+        return -1;
+    }
+    return 0;
+}
+
+int main() {
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+    struct pollfd fds[MAX_CLIENTS];
+    int nfds = 1;
+
+    // Create server socket
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == 0) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set server socket to non-blocking
+    if (set_nonblocking(server_fd) == -1) {
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Bind the socket
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(PORT);
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for incoming connections
+    if (listen(server_fd, 3) < 0) {
+        perror("listen");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Initialize the pollfd structure
+    fds.fd = server_fd;
+    fds.:inlineRefs{references="&#91;&#123;&quot;type&quot;&#58;&quot;inline_reference&quot;,&quot;start_index&quot;&#58;3737,&quot;end_index&quot;&#58;3740,&quot;number&quot;&#58;0,&quot;url&quot;&#58;&quot;https&#58;//luminousmen.com/post/asynchronous-programming-blocking-and-non-blocking/&quot;,&quot;favicon&quot;&#58;&quot;https&#58;//imgs.search.brave.com/bD3OJ9vqab6igUW9wy1PHm-m1E1i8a-sIFLV4WjO9Jo/rs&#58;fit&#58;32&#58;32&#58;1&#58;0/g&#58;ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQwODRlMTQx/MDBjNDhiMDM3NWEy/Y2JhOTg4NDlmMjVi/ZWVmZjMyYTg4MzNi/YzNlNjJiOGNiMTQ5/NDVhMmI0Mi9sdW1p/bm91c21lbi5jb20v&quot;,&quot;snippet&quot;&#58;&quot;System&#32;Event&#58;&#32;Intel&#32;Optane&#32;DC&#32;SSD&#32;I/O&#32;•&#32;Actual&#32;Latency&#58;&#32;&lt;&#32;10&#32;μs&#32;•&#32;Scaled&#32;Latency&#58;&#32;7&#32;hrs…&quot;&#125;&#93;"}events = POLLIN;
+
+    while (1) {
+        int ret = poll(fds, nfds, TIMEOUT);
+        if (ret < 0) {
+            perror("poll");
+            break;
+        }
+
+        if (ret == 0) {
+            printf("Poll timeout\n");
+            continue;
+        }
+
+        for (int i = 0; i < nfds; i++) {
+            if (fds[i].revents & POLLIN) {
+                if (fds[i].fd == server_fd) {
+                    // Accept new connection
+                    new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
+                    if (new_socket < 0) {
+                        perror("accept");
+                        continue;
+                    }
+
+                    // Set new socket to non-blocking
+                    if (set_nonblocking(new_socket) == -1) {
+                        close(new_socket);
+                        continue;
+                    }
+
+                    // Add new socket to pollfd array
+                    fds[nfds].fd = new_socket;
+                    fds[nfds].events = POLLIN;
+                    nfds++;
+                } else {
+                    // Handle client data
+                    char buffer = {0};
+                    int valread = read(fds[i].fd, buffer, sizeof(buffer));
+                    if (valread <= 0) {
+                        // Client disconnected
+                        close(fds[i].fd);
+                        fds[i] = fds[nfds - 1];
+                        nfds--;
+                        i--;
+                    } else {
+                        // Process data and send response
+                        printf("Received: %s\n", buffer);
+                        send(fds[i].fd, "Hello from server", 17, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    close(server_fd);
+    return 0;
+}
+
+
+7. Checking the value of errno is strictly forbidden after performing a read or write
+operation.
+
+What you should do instead:
+Always check the return value of the read, write, or other system call.
+Only use errno when the documentation of that specific function explicitly
+says it sets errno on failure.
+Avoid relying on errno if the function returned a success status.
+
+ssize_t bytes_read = read(fd, buffer, size);
+if (bytes_read == -1) {
+    // OK: Read failed, errno may be checked (if documented)
+    perror("Read failed");
+} else {
+    // NOT OK: Do not check errno here, even if bytes_read is 0 or unexpected
+}
+
