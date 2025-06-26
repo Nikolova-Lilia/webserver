@@ -33,6 +33,8 @@ Loop:
 #include <unistd.h>     // For close, read(), write()
 #include <cstring>      // For strlen()
 #include <csignal>      // For signal()
+#include <fstream>      // For file handling
+#include <sstream>      // For stringstream
 
 int server_fd; // global so it can be accessed in a signal handler
 
@@ -91,6 +93,47 @@ int main() {
         read(client_fd, buffer, 3000); // 5. Read HTTP request
         std::cout << "Received request:\n" << buffer << std::endl;
 
+        // Parse the requested path
+        std::string request(buffer);
+        std::istringstream request_stream(request);
+        std::string method, path, version;
+        request_stream >> method >> path >> version;
+
+        std:: string filename;
+
+        if (path == "/") {
+            filename = "index.html";
+        } else {
+            // Remove leading
+            filename = path.substr(1);
+        }
+
+        std::ifstream file(filename); // Try opening the file
+        std::stringstream response;
+
+        if (file.good()) {
+            std::string content((std::istreambuf_iterator<char>(file)), 
+                                std::istreambuf_iterator<char>());
+            
+            response << "HTTP/1.1 200 OK\r\n";
+            response << "Content-Type: text/html\r\n";
+            response << "Content-Length: " << content.size() << "\r\n";
+            response << "\r\n";
+            response << content;
+        } else {
+            std::string not_found = "<h1>404 Not Found</h1>";
+            response << "HTTP/1.1 404 Not Found\r\n";
+            response << "Content-type: text/html\r\n";
+            response << "Content-Length: " << not_found.size() << "\r\n";
+            response << "\r\n";
+            response << not_found;
+        }
+
+        std::string final_response = response.str();
+        send(client_fd, final_response.c_str(), final_response.size(), 0);
+        close(client_fd); // close connection
+
+        /*
         // 6. Send HTTP response
         const char* response = 
             "HTTP/1.1 200 OK\r\n"
@@ -102,6 +145,7 @@ int main() {
             send(client_fd, response, strlen(response), 0);
 
             close(client_fd); // 7. Close connection
+            */
     }
 
     return (0);
